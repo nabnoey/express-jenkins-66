@@ -113,7 +113,7 @@ pipeline {
                     docker ps --filter name=${APP_NAME} --format "table {{.Names}}\\t{{.Image}}\\t{{.Status}}"
                 """
             }
-                /
+                
     // กำหนด post actions
     // เช่น การแจ้งเตือนเมื่อ pipeline เสร็จสิ้น
     // สามารถเพิ่มการแจ้งเตือนผ่าน email, Slack, หรืออื่นๆ ได้ตามต้องการ
