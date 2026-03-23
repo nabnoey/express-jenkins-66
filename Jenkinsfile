@@ -22,20 +22,20 @@ pipeline {
 
         stage('Debug Env') {
             steps {
-                bat 'node -v'
-                bat 'npm -v'
-                bat 'docker -v'
+                sh 'node -v'
+                sh 'npm -v'
+                sh 'docker -v'
             }
         }
 
         stage('Install & Test') {
             steps {
-                bat '''
-                IF EXIST package-lock.json (
+                sh '''
+                if [ -f package-lock.json ]; then
                     npm ci
-                ) ELSE (
+                else
                     npm install
-                )
+                fi
                 npm test
                 '''
             }
@@ -43,9 +43,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat '''
-                echo Building Docker image...
-                docker build --target production -t %DOCKER_REPO%:%BUILD_NUMBER% -t %DOCKER_REPO%:latest .
+                sh '''
+                echo "Building Docker image..."
+                docker build --target production -t ${DOCKER_REPO}:${BUILD_NUMBER} -t ${DOCKER_REPO}:latest .
                 '''
             }
         }
@@ -57,13 +57,13 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat '''
-                    echo Logging into Docker Hub...
-                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    sh '''
+                    echo "Logging into Docker Hub..."
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
-                    echo Pushing image...
-                    docker push %DOCKER_REPO%:%BUILD_NUMBER%
-                    docker push %DOCKER_REPO%:latest
+                    echo "Pushing image..."
+                    docker push ${DOCKER_REPO}:${BUILD_NUMBER}
+                    docker push ${DOCKER_REPO}:latest
 
                     docker logout
                     '''
@@ -73,24 +73,25 @@ pipeline {
 
         stage('Cleanup Docker') {
             steps {
-                bat '''
-                echo Cleaning up...
-                docker image rm -f %DOCKER_REPO%:%BUILD_NUMBER% || exit 0
-                docker image rm -f %DOCKER_REPO%:latest || exit 0
+                sh '''
+                echo "Cleaning up local Docker images..."
+                docker image rm -f ${DOCKER_REPO}:${BUILD_NUMBER} || true
+                docker image rm -f ${DOCKER_REPO}:latest || true
+                docker image prune -af || true
+                docker builder prune -af || true
                 '''
             }
         }
 
         stage('Deploy Local') {
             steps {
-                bat '''
-                echo Deploying container...
-                docker pull %DOCKER_REPO%:latest
-                docker stop %APP_NAME% || exit 0
-                docker rm %APP_NAME% || exit 0
-                docker run -d --name %APP_NAME% -p 3000:3000 %DOCKER_REPO%:latest
-
-                docker ps
+                sh '''
+                echo "Deploying container..."
+                docker pull ${DOCKER_REPO}:latest
+                docker stop ${APP_NAME} || true
+                docker rm ${APP_NAME} || true
+                docker run -d --name ${APP_NAME} -p 3000:3000 ${DOCKER_REPO}:latest
+                docker ps --filter name=${APP_NAME} --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
                 '''
             }
         }
@@ -108,7 +109,6 @@ pipeline {
         }
     }
 }
-
 
 
 
