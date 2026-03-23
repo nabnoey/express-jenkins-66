@@ -15,7 +15,7 @@ app.get('/', (_: Request, res: Response) => {
 // GET /api/hello
 app.get('/api/hello', (_: Request, res: Response) => {
   res.json({
-    message: 'Hello from Express API!'
+    message: 'สวัสดีจ้า'
   })
 })
 
